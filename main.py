@@ -4,6 +4,11 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy import Column, Integer, String
 from sqlalchemy.future import select
+import logging
+
+# Setup logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 # Use asyncpg for async connections to PostgreSQL
 DATABASE_URL = "postgresql+asyncpg://postgres:xSFdbSLNsFICYerKCZdSDtEVgmrugfYG@junction.proxy.rlwy.net:28529/railway"
@@ -52,36 +57,56 @@ async def startup():
 
 @app.post("/items/")
 async def create_item(name: str, db: AsyncSession = Depends(get_db)):
-    item = Item(name=name)
-    db.add(item)
-    await db.commit()
-    await db.refresh(item)
-    return item
+    try:
+        item = Item(name=name)
+        db.add(item)
+        await db.commit()
+        await db.refresh(item)
+        return item
+    except Exception as e:
+        logger.error(f"Error creating item: {e}")
+        raise HTTPException(status_code=500, detail="Internal Server Error")
 
 @app.get("/items/{item_id}")
 async def read_item(item_id: int, db: AsyncSession = Depends(get_db)):
-    result = await db.execute(select(Item).where(Item.id == item_id))
-    item = result.scalar_one_or_none()  # Returns None if not found
+    try:
+        result = await db.execute(select(Item).where(Item.id == item_id))
+        item = result.scalar_one_or_none()
 
-    if item is None:
-        raise HTTPException(status_code=404, detail="Item not found")
+        if item is None:
+            raise HTTPException(status_code=404, detail="Item not found")
 
-    return item
+        return item
+    except Exception as e:
+        logger.error(f"Error retrieving item {item_id}: {e}")
+        raise HTTPException(status_code=500, detail="Internal Server Error")
 
 @app.get("/items/")
 async def read_items(skip: int = 0, limit: int = 10, db: AsyncSession = Depends(get_db)):
-    result = await db.execute(select(Item).offset(skip).limit(limit))
-    items = result.scalars().all()
-    return items
+    try:
+        result = await db.execute(select(Item).offset(skip).limit(limit))
+        items = result.scalars().all()
+        return items
+    except Exception as e:
+        logger.error(f"Error retrieving items: {e}")
+        raise HTTPException(status_code=500, detail="Internal Server Error")
 
 @app.get("/items/veg/")
 async def read_veg_items(db: AsyncSession = Depends(get_db)):
-    result = await db.execute(select(Item).where(Item.category == "Veg"))
-    veg_items = result.scalars().all()
-    return veg_items
+    try:
+        result = await db.execute(select(Item).where(Item.category == "Veg"))
+        veg_items = result.scalars().all()
+        return veg_items
+    except Exception as e:
+        logger.error(f"Error retrieving veg items: {e}")
+        raise HTTPException(status_code=500, detail="Internal Server Error")
 
 @app.get("/items/non-veg/")
 async def read_nonveg_items(db: AsyncSession = Depends(get_db)):
-    result = await db.execute(select(Item).where(Item.category == "Non-Veg"))
-    nonveg_items = result.scalars().all()
-    return nonveg_items
+    try:
+        result = await db.execute(select(Item).where(Item.category == "Non-Veg"))
+        nonveg_items = result.scalars().all()
+        return nonveg_items
+    except Exception as e:
+        logger.error(f"Error retrieving non-veg items: {e}")
+        raise HTTPException(status_code=500, detail="Internal Server Error")
