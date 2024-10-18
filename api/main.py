@@ -50,7 +50,7 @@ async def get_db():
 async def startup():
     await init_db()
 
-@app.post("/items/")
+@app.post("/items_post/")
 async def create_item(name: str, db: AsyncSession = Depends(get_db)):
     item = Item(name=name)
     db.add(item)
